@@ -23,6 +23,8 @@ POWER_RANKINGS_HEADER = [
     "Consistency (StDev)", "Roster Strength (proj)",
 ]
 
+HISTORY_HEADER = ["Week", "Team", "Owner", "Power Score", "Rank", "Updated"]
+
 
 def _client() -> gspread.Client:
     config.require("GOOGLE_SERVICE_ACCOUNT_JSON", "GOOGLE_SHEET_ID")
@@ -126,10 +128,22 @@ def write_weekly_power_rankings(week: int, rows: List[PowerRankingRow], sheet_id
     # 2) Append to running history tab: one row per team per week, good for
     #    building a trend line chart across the season.
     hist = _get_or_create_worksheet(sh, "Power Rankings History", rows=2000, cols=10)
-    if not hist.get_all_values():
-        hist.append_row(["Week", "Team", "Owner", "Power Score", "Rank", "Updated"])
+    if hist.row_values(1) != HISTORY_HEADER:
+        hist.insert_row(HISTORY_HEADER, 1)
         hist.format("A1:F1", {"textFormat": {"bold": True}})
         hist.freeze(rows=1)
+
+    # Drop any rows already logged for this week so reruns overwrite instead
+    # of piling up duplicates (rows for a week are always written as one
+    # contiguous block, so a single min/max range covers them).
+    week_str = str(week)
+    existing_week_rows = [
+        i for i, r in enumerate(hist.get_all_values()[1:], start=2)
+        if r and r[0] == week_str
+    ]
+    if existing_week_rows:
+        hist.delete_rows(min(existing_week_rows), max(existing_week_rows))
+
     now = datetime.now().isoformat(timespec="minutes")
     hist.append_rows(
         [[week, r.team_name, r.owner, r.power_score, r.rank, now] for r in rows],
