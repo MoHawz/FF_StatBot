@@ -11,7 +11,7 @@ access token (not the bot_id) -- see SETUP.md for the two-minute steps to
 grab one. groupme_bot.post_power_rankings_image() handles the upload +
 posting once that token is in `.env`.
 """
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 from PIL import Image, ImageDraw, ImageFont
 
@@ -20,6 +20,7 @@ from .power_rankings import PowerRankingRow
 
 WIDTH = 900
 ROW_HEIGHT = 92
+REASON_EXTRA_HEIGHT = 24   # extra vertical space a row gets when it has a "why" line
 HEADER_HEIGHT = 130
 FOOTER_HEIGHT = 40
 PADDING = 24
@@ -54,6 +55,7 @@ F_OWNER = _font("DejaVuSans.ttf", 18)
 F_SCORE = _font("DejaVuSans-Bold.ttf", 30)
 F_DETAIL = _font("DejaVuSans.ttf", 17)
 F_ARROW = _font("DejaVuSans-Bold.ttf", 18)
+F_REASON = _font("DejaVuSans.ttf", 16)
 
 
 def _movement_text(movement: int):
@@ -69,8 +71,20 @@ def render_power_rankings(
     rows: List[PowerRankingRow],
     out_path: str,
     subtitle: Optional[str] = None,
+    reasons: Optional[Dict[int, str]] = None,
 ) -> str:
-    height = HEADER_HEIGHT + ROW_HEIGHT * len(rows) + FOOTER_HEIGHT
+    """
+    reasons: optional {team_id: "why" text}, e.g. from
+    movement_reasons.compute_movement_reasons() -- a short factual line
+    ("Lost 3 straight", "Lost Player X (IR)") shown under a mover's record
+    line. Teams not in the dict (including any team with movement == 0)
+    just get the normal two-line layout -- silence is intentional, not
+    every row needs an explanation.
+    """
+    reasons = reasons or {}
+
+    row_heights = [ROW_HEIGHT + (REASON_EXTRA_HEIGHT if r.team_id in reasons else 0) for r in rows]
+    height = HEADER_HEIGHT + sum(row_heights) + FOOTER_HEIGHT
     img = Image.new("RGB", (WIDTH, height), COLOR_BG)
     draw = ImageDraw.Draw(img)
 
@@ -81,13 +95,16 @@ def render_power_rankings(
 
     max_score = max((r.power_score for r in rows), default=1) or 1
 
+    y_cursor = HEADER_HEIGHT
     for i, r in enumerate(rows):
-        y0 = HEADER_HEIGHT + i * ROW_HEIGHT
-        y1 = y0 + ROW_HEIGHT
+        row_h = row_heights[i]
+        y0 = y_cursor
+        y1 = y0 + row_h
+        y_cursor = y1
         draw.rectangle([0, y0, WIDTH, y1], fill=(COLOR_ROW_A if i % 2 == 0 else COLOR_ROW_B))
 
-        # rank circle
-        cx, cy, r_rad = 56, y0 + ROW_HEIGHT // 2, 30
+        # rank circle, vertically centered on this row (taller when a reason is shown)
+        cx, cy, r_rad = 56, y0 + row_h // 2, 30
         circle_color = COLOR_ACCENT if r.rank == 1 else COLOR_BAR_BG
         draw.ellipse([cx - r_rad, cy - r_rad, cx + r_rad, cy + r_rad], fill=circle_color)
         rank_text = str(r.rank)
@@ -100,14 +117,21 @@ def render_power_rankings(
         draw.text((tx, y0 + 50), f"{r.owner}  •  {r.wins}-{r.losses}{'-' + str(r.ties) if r.ties else ''}  •  {r.ppg} ppg",
                    font=F_OWNER, fill=COLOR_SUBTEXT)
 
-        # power score bar (visual, quick scan of "how far ahead")
-        bar_x0, bar_w, bar_y, bar_h = tx, 320, y0 + 74, 10
+        reason = reasons.get(r.team_id)
+        if reason:
+            reason_color = COLOR_UP if r.movement > 0 else COLOR_DOWN
+            draw.text((tx, y0 + 72), reason, font=F_REASON, fill=reason_color)
+
+        # power score bar (visual, quick scan of "how far ahead"), pinned
+        # near the bottom of the row so it still lines up under the text
+        # whether or not this row has the extra reason line
+        bar_x0, bar_w, bar_y, bar_h = tx, 320, y0 + row_h - 18, 10
         draw.rounded_rectangle([bar_x0, bar_y, bar_x0 + bar_w, bar_y + bar_h], radius=5, fill=COLOR_BAR_BG)
         fill_w = max(6, int(bar_w * (r.power_score / max_score)))
         bar_color = COLOR_ACCENT if r.rank == 1 else (90, 140, 210)
         draw.rounded_rectangle([bar_x0, bar_y, bar_x0 + fill_w, bar_y + bar_h], radius=5, fill=bar_color)
 
-        # score + movement, right-aligned
+        # score + movement, right-aligned, top-anchored to this row
         score_text = f"{r.power_score}"
         stw = draw.textlength(score_text, font=F_SCORE)
         score_x = WIDTH - PADDING - 90

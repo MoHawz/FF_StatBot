@@ -3,3 +3,5 @@ gspread
 google-auth
 requests
 python-dotenv
+Pillow
+matplotlib

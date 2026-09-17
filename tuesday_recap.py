@@ -107,9 +107,14 @@ def main():
             print(f"{title}: {line}")
 
         if not args.no_groupme and config.GROUPME_BOT_ID:
-            from fantasy_football import groupme_bot, rankings_image
+            from fantasy_football import groupme_bot, rankings_image, movement_reasons
             if config.GROUPME_ACCESS_TOKEN:
-                img_path = rankings_image.render_power_rankings(through_week, rows, "power_rankings.png")
+                reasons = None
+                try:
+                    reasons = movement_reasons.compute_movement_reasons(rows, team_seasons, league, through_week)
+                except Exception as e:
+                    print(f"(movement reasons unavailable this week: {e})")
+                img_path = rankings_image.render_power_rankings(through_week, rows, "power_rankings.png", reasons=reasons)
                 groupme_bot.post_power_rankings_image(through_week, img_path)
             else:
                 # Falls back to the plain-text table if no personal access
