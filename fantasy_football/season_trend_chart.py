@@ -16,8 +16,8 @@ is exactly what a rank line answers on its own.
 
 Each panel's line is colored by *direction* (green = finished better than
 they started, red = finished worse, gray = unchanged) -- a status encoding,
-not a categorical one, using the same good/critical steps the rest of this
-project's dark-navy theme is built around.
+kept separate from the maroon/white/black brand palette the rest of this
+project uses, same reasoning as branding.py's module docstring.
 """
 from dataclasses import dataclass
 from typing import Dict, List, Optional
@@ -26,17 +26,23 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import matplotlib.font_manager as fm
+import numpy as np
 
-from . import config, espn_client, power_rankings, roster_strength
+from . import branding, config, espn_client, power_rankings, roster_strength
 
-COLOR_BG = "#121c2b"          # matches the GroupMe image cards
-COLOR_PANEL = "#1a2740"
-COLOR_TEXT = "#f0f0f0"
-COLOR_SUBTEXT = "#a0acbe"
-COLOR_GRID = "#2c3a52"
-COLOR_GOOD = "#0ca30c"        # finished better than they started
-COLOR_CRITICAL = "#d03b3b"    # finished worse
-COLOR_NEUTRAL = "#8a93a6"     # unchanged
+
+def _hex(rgb):
+    return "#%02x%02x%02x" % rgb
+
+
+COLOR_BG = _hex(branding.BLACK)
+COLOR_PANEL = "#1c1c1c"
+COLOR_TEXT = _hex(branding.WHITE)
+COLOR_SUBTEXT = _hex(branding.GRAY_SUBTEXT)
+COLOR_GRID = "#333333"
+COLOR_GOOD = _hex(branding.STATUS_GOOD)     # finished better than they started
+COLOR_CRITICAL = _hex(branding.STATUS_BAD)  # finished worse
+COLOR_NEUTRAL = _hex(branding.STATUS_NEUTRAL)  # unchanged
 
 _FONT_PATH = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
 _FONT_PATH_REG = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
@@ -105,12 +111,24 @@ def render_season_trend(
     cols = 3 if n_teams <= 9 else 4
     rows = -(-n_teams // cols)  # ceil
 
-    fig, axes = plt.subplots(
-        rows, cols,
-        figsize=(cols * 3.4, rows * 2.6),
-        dpi=150,
-        facecolor=COLOR_BG,
-    )
+    fig_w_in, fig_h_in, dpi = cols * 3.4, rows * 2.6, 150
+    fig = plt.figure(figsize=(fig_w_in, fig_h_in), dpi=dpi, facecolor=COLOR_BG)
+
+    # watermark first, so it sits *behind* the subplot grid added next --
+    # each panel's own opaque background will cover it within panel bounds,
+    # leaving it visible only in the margins/gutters (see branding.py)
+    logo = branding.load_logo()
+    if logo:
+        fig_w_px, fig_h_px = int(fig_w_in * dpi), int(fig_h_in * dpi)
+        wm_size = int(min(fig_w_px, fig_h_px) * 0.55)
+        watermark = branding.flat_tint(logo, opacity=0.05, tint=branding.WHITE, max_size=(wm_size, wm_size))
+        if watermark:
+            wm_arr = np.asarray(watermark)
+            wx = (fig_w_px - wm_arr.shape[1]) // 2
+            wy = (fig_h_px - wm_arr.shape[0]) // 2
+            fig.figimage(wm_arr, xo=wx, yo=wy, zorder=0)
+
+    axes = fig.subplots(rows, cols)
     axes_flat = axes.flatten() if n_teams > 1 else [axes]
 
     for i, tid in enumerate(team_ids):

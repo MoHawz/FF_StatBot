@@ -91,6 +91,31 @@ BOT_NAME=Your Bot's Name
 
 Purely cosmetic -- nothing else depends on these.
 
+## Optional: your league logo (`LOGO_PATH`)
+
+If you have a logo/crest image, point `LOGO_PATH` in `.env` at it (an
+absolute path, or one relative to wherever you run the scripts from):
+
+```
+LOGO_PATH=./assets/logo.png
+```
+
+The image itself is never committed -- only the path -- so put it wherever
+you like on your machine; a good spot is an `assets/` folder next to this
+script (already gitignored). Works best as a badge/crest-style image, PNG,
+on a plain white or transparent background -- a wide logo will get
+letterboxed down to fit the small badge size these cards use.
+
+When set, every rendered card (power rankings, FAAB report, predictions,
+and the season trend chart) shows a small crisp version of it in the
+header corner, plus a large, very faint version of it as a background
+watermark. Leave it unset and everything renders exactly as before, just
+without a logo.
+
+The color scheme on all four -- maroon header, black background, white
+text -- is Mississippi State's official brand maroon (`#5D1725`). To use
+different colors, edit the constants at the top of `fantasy_football/branding.py`.
+
 ## Running it
 
 ```bash

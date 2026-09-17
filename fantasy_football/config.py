@@ -27,6 +27,11 @@ BOT_NAME             - your GroupMe bot's name, shown in the footer of the
                       placeholder). Same reasoning as LEAGUE_DISPLAY_NAME --
                       this is just the little "<Bot Name>'s Power Rankings"
                       caption at the bottom of each card.
+LOGO_PATH            - local path to your league's logo image (optional;
+                      no logo shown if unset). Kept as a path rather than
+                      committing the actual image, same reasoning as the
+                      two above -- your logo file lives wherever you put
+                      it on disk and never goes into the repo.
 
 See SETUP.md in this folder for step-by-step instructions on getting each of these.
 """
@@ -65,6 +70,7 @@ GOOGLE_SHEET_ID = os.environ.get("GOOGLE_SHEET_ID") or None
 # public without the source revealing your actual league/bot names.
 LEAGUE_DISPLAY_NAME = os.environ.get("LEAGUE_DISPLAY_NAME") or "Fantasy League"
 BOT_NAME = os.environ.get("BOT_NAME") or "Stat Bot"
+LOGO_PATH = os.environ.get("LOGO_PATH") or None
 
 
 def require(*names):

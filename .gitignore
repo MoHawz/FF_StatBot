@@ -7,7 +7,12 @@ service_account.json
 power_rankings.png
 faab_report.png
 predictions.png
+season_trend.png
 prev_ranks.json
+
+# Your league's logo, if you set LOGO_PATH to point here -- personal
+# league branding, not part of the public repo
+assets/
 
 # Python
 __pycache__/
