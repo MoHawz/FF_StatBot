@@ -1,0 +1,26 @@
+# Secrets -- never commit these
+.env
+service_account.json
+*.json.key
+
+# Generated at runtime -- not source
+power_rankings.png
+faab_report.png
+predictions.png
+prev_ranks.json
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+*.egg-info/
+
+# OS cruft
+.DS_Store
+Thumbs.db
+
+# One-off update instructions for Claude Code -- served their purpose,
+# not part of the actual project once the repo exists
+UPDATE_*.md

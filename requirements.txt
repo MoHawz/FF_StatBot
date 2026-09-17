@@ -1,0 +1,5 @@
+espn_api
+gspread
+google-auth
+requests
+python-dotenv
