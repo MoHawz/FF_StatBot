@@ -10,7 +10,7 @@ message, same as today -- only the matchup table itself becomes an image.
 
 Colors and the optional logo come from branding.py / config.LOGO_PATH.
 """
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 from PIL import Image, ImageDraw, ImageFont
 
@@ -19,6 +19,7 @@ from .weekly_prediction import MatchupPrediction
 
 WIDTH = 900
 HEADER_HEIGHT = 130
+RECORD_HEIGHT = 32  # extra header space for Skip's W-L record, when shown
 ROW_HEIGHT = 110
 FOOTER_HEIGHT = 40
 PADDING = 24
@@ -41,6 +42,7 @@ F_PCT = _font("DejaVuSans-Bold.ttf", 22)
 F_VS = _font("DejaVuSans.ttf", 16)
 F_TAG = _font("DejaVuSans-Bold.ttf", 16)
 F_DETAIL = _font("DejaVuSans.ttf", 17)
+F_RECORD = _font("DejaVuSans-Bold.ttf", 20)
 
 # DejaVu Sans has no emoji glyphs (they rendered as tofu boxes), so the
 # confidence tag is plain text + color only, same idea as the movement
@@ -56,29 +58,36 @@ def _tag_color(confidence: str):
 
 
 def render_predictions(week: int, predictions: List[MatchupPrediction], out_path: str,
-                        subtitle: Optional[str] = None) -> str:
-    height = HEADER_HEIGHT + ROW_HEIGHT * max(1, len(predictions)) + FOOTER_HEIGHT
+                        subtitle: Optional[str] = None, record: Optional[Tuple[int, int]] = None) -> str:
+    header_height = HEADER_HEIGHT + (RECORD_HEIGHT if record else 0)
+    height = header_height + ROW_HEIGHT * max(1, len(predictions)) + FOOTER_HEIGHT
     img = Image.new("RGBA", (WIDTH, height), branding.BLACK + (255,))
     draw = ImageDraw.Draw(img)
     logo = branding.load_logo()
 
-    draw.rectangle([0, 0, WIDTH, HEADER_HEIGHT], fill=branding.MAROON)
+    draw.rectangle([0, 0, WIDTH, header_height], fill=branding.MAROON)
     if logo:
-        branding.paste_watermark(img, logo, box=(WIDTH - 340, 0, WIDTH, HEADER_HEIGHT), opacity=0.16)
+        branding.paste_watermark(img, logo, box=(WIDTH - 340, 0, WIDTH, header_height), opacity=0.16)
     draw.text((PADDING, 26), "CLOSE ENOUGH FOR NOW", font=F_TITLE, fill=branding.WHITE)
     draw.text((PADDING, 68), f"Week {week} Predictions  •  {subtitle or config.LEAGUE_DISPLAY_NAME}",
                font=F_SUB, fill=branding.WHITE)
+    if record is not None:
+        wins, losses = record
+        total = wins + losses
+        pct = f" ({wins / total:.3f})".replace(" (0.", " (.") if total else ""
+        draw.text((PADDING, HEADER_HEIGHT + 2), f"{config.BOT_NAME}'s Record: {wins}-{losses}{pct}",
+                   font=F_RECORD, fill=branding.STATUS_GOOD)
     if logo:
         branding.paste_badge(img, logo, size=76, margin=16)
 
     if not predictions:
-        draw.text((PADDING, HEADER_HEIGHT + 20), "No matchups found for this week.",
+        draw.text((PADDING, header_height + 20), "No matchups found for this week.",
                    font=F_DETAIL, fill=branding.GRAY_SUBTEXT)
         img.convert("RGB").save(out_path, "PNG")
         return out_path
 
     for i, p in enumerate(predictions):
-        y0 = HEADER_HEIGHT + i * ROW_HEIGHT
+        y0 = header_height + i * ROW_HEIGHT
         draw.rectangle([0, y0, WIDTH, y0 + ROW_HEIGHT], fill=(branding.ROW_A if i % 2 == 0 else branding.ROW_B))
 
         home_winner = p.home_win_pct >= p.away_win_pct

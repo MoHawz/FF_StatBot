@@ -14,10 +14,16 @@ player_projection.py) -- a lineup facing a rough set of real-life matchups
 gets pulled down, a lineup catching a soft set gets bumped up, individually
 per player rather than as one team-level blob.
 
+Also logs each week's picks (whichever team had the higher win probability,
+Toss-Ups included) to a "Skip's Predictions" sheet tab, and grades last
+week's picks against the actual results once they're in -- that running
+W-L record is what shows up at the top of the predictions image.
+
 Usage:
   python sunday_predictions.py                # auto-detects current week
   python sunday_predictions.py --week 5        # force a specific week
   python sunday_predictions.py --no-groupme    # print only, skip GroupMe
+  python sunday_predictions.py --no-sheet      # skip grading/logging picks
 """
 import argparse
 import sys
@@ -32,6 +38,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--week", type=int, default=None)
     parser.add_argument("--no-groupme", action="store_true")
+    parser.add_argument("--no-sheet", action="store_true")
     parser.add_argument("--sim-trials", type=int, default=20000)
     args = parser.parse_args()
 
@@ -56,11 +63,20 @@ def main():
         for title, line in banter_lines:
             print(f"{title}: {line}")
 
+    record = None
+    if not args.no_sheet and config.GOOGLE_SHEET_ID:
+        from fantasy_football import prediction_record, sheets_writer
+        sh = sheets_writer.client().open_by_key(config.GOOGLE_SHEET_ID)
+        last_completed_week = week - 1
+        record = prediction_record.grade_pending(sh, league, last_completed_week) if last_completed_week >= 1 else (0, 0)
+        prediction_record.record_predictions(sh, predictions)
+        print(f"\n{config.BOT_NAME}'s record through Week {last_completed_week}: {record[0]}-{record[1]}")
+
     if not args.no_groupme and config.GROUPME_BOT_ID:
         from fantasy_football import groupme_bot
         if config.GROUPME_ACCESS_TOKEN:
             from fantasy_football import predictions_image
-            img_path = predictions_image.render_predictions(week, predictions, "predictions.png")
+            img_path = predictions_image.render_predictions(week, predictions, "predictions.png", record=record)
             groupme_bot.post_predictions_image(week, img_path, banter_lines)
         else:
             # Falls back to the plain-text table if no personal access token
