@@ -37,6 +37,9 @@ import argparse
 import json
 import sys
 
+sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
 from fantasy_football import config, espn_client, power_rankings, playoff_sim, roster_strength
 
 
