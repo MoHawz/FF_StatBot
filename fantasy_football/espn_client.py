@@ -88,8 +88,13 @@ def get_all_team_seasons(league: League, through_week: int = None) -> list:
         ):
             if wk_idx > through_week:
                 break
-            if score in (None, 0) and outcome in (None, "UNDECIDED"):
-                # not played yet
+            # espn_api reports outcomes as short codes ('W'/'L'/'T'/'U'), not
+            # the full words -- comparing against "WIN"/"TIE" never matched,
+            # so is_win/is_tie were silently always False. Accept both forms
+            # in case a future espn_api version spells them out.
+            outcome_str = str(outcome).upper() if outcome is not None else ""
+            if score in (None, 0) and outcome_str in ("", "U", "UNDECIDED"):
+                # not played yet / bye week
                 continue
             opp = sched
             opp_id = getattr(opp, "team_id", None)
@@ -99,8 +104,8 @@ def get_all_team_seasons(league: League, through_week: int = None) -> list:
                 idx0 = wk_idx - 1
                 if idx0 < len(opp_team.scores):
                     opp_score = opp_team.scores[idx0]
-            is_tie = str(outcome).upper() == "TIE"
-            is_win = None if is_tie else (str(outcome).upper() == "WIN")
+            is_tie = outcome_str in ("T", "TIE")
+            is_win = None if is_tie else outcome_str in ("W", "WIN")
             weeks.append(
                 TeamWeek(
                     team_id=team.team_id,
