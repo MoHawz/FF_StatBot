@@ -9,6 +9,7 @@ faab_report.png
 predictions.png
 season_trend.png
 prev_ranks.json
+banter_state.json
 
 # Your league's logo, if you set LOGO_PATH to point here -- personal
 # league branding, not part of the public repo

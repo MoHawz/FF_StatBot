@@ -116,6 +116,18 @@ The color scheme on all four -- maroon header, black background, white
 text -- is Mississippi State's official brand maroon (`#5D1725`). To use
 different colors, edit the constants at the top of `fantasy_football/branding.py`.
 
+## Keeping the banter fresh (`banter_state.json`)
+
+The trash-talk lines (awards, FAAB call-outs, prediction banter) rotate
+through ~6-10 phrasing variants per category instead of a fixed one-liner,
+so a 17-week season doesn't repeat itself. A small `banter_state.json` file
+gets created next to the scripts the first time they run -- it just tracks
+which variants have already been used per category so nothing repeats until
+the whole set has been shown once, and it never hands back the same line
+two weeks in a row. It's regenerated automatically and gitignored; delete
+it any time to reset the rotation, or leave it alone and it'll keep
+tracking itself all season.
+
 ## Running it
 
 ```bash
